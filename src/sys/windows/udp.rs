@@ -274,7 +274,7 @@ impl UdpSocket {
             // Empty == we're not associated yet, and if we're pending then
             // these are both cases where we return "would block"
             State::Empty |
-            State::Pending(()) => return Err(io::ErrorKind::WouldBlock.into()),
+            State::Pending(_) => return Err(io::ErrorKind::WouldBlock.into()),
 
             // If we got a delayed error as part of a `read_overlapped` below,
             // return that here. Also schedule another read in case it was
