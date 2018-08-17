@@ -277,7 +277,6 @@ impl UdpSocket {
                 self.imp.schedule_read_from(&mut me);
                 e
             })
-        }
     }
 
     pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
