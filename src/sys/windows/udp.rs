@@ -270,13 +270,13 @@ impl UdpSocket {
     pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SocketAddr)> {
         let mut me = self.inner();
 
-        match (&self.imp.inner.socket).peek(buf) {
-            Ok(n) => Ok(n),
-            Err(e) => {
+        (&self.imp.inner.socket)
+            .peek_from(buf)
+            .map_err(move |e| {
                 me.read = State::Empty;
                 self.imp.schedule_read_from(&mut me);
-                Err(e)
-            }
+                e
+            })
         }
     }
 
