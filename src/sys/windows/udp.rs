@@ -270,13 +270,35 @@ impl UdpSocket {
     pub fn peek_from(&self, buf: &mut [u8]) -> io::Result<(usize, SocketAddr)> {
         let mut me = self.inner();
 
-        (&self.imp.inner.socket)
-            .peek_from(buf)
-            .map_err(move |e| {
+        match me.read {
+            // Empty == we're not associated yet, and if we're pending then
+            // these are both cases where we return "would block"
+            State::Empty |
+            State::Pending(()) => return Err(io::ErrorKind::WouldBlock.into()),
+
+            // If we got a delayed error as part of a `read_overlapped` below,
+            // return that here. Also schedule another read in case it was
+            // transient.
+            State::Error(_) => {
+                let e = match mem::replace(&mut me.read, State::Empty) {
+                    State::Error(e) => e,
+                    _ => panic!(),
+                };
+                self.imp.schedule_read_from(&mut me);
+                return Err(e)
+            }
+
+            State::Ready(_) => {}
+        };
+
+        match (&self.imp.inner.socket).peek_from(buf) {
+            Ok((n, addr)) => Ok((n, addr)),
+            Err(e) => {
                 me.read = State::Empty;
                 self.imp.schedule_read_from(&mut me);
-                e
-            })
+                Err(e)
+            }
+        }
     }
 
     pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
